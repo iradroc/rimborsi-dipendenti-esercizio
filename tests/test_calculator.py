@@ -70,3 +70,55 @@ class TestCalcola:
             "esente_teorica": 154.94,
             "capienza_plafond": 100.0,
         }
+
+
+class TestMassimaleTeorico2026:
+    """Massimali aggiornati dalla Circolare MEF 18/2026 (spese dal 01/01/2026)."""
+
+    def test_trasferta_italia(self):
+        r = richiesta(data="2026-02-10", categoria="trasferta_italia", giorni=4)
+        assert calculator.massimale_teorico(r) == 200.0
+
+    def test_trasferta_estero(self):
+        r = richiesta(data="2026-02-10", categoria="trasferta_estero", giorni=3)
+        assert calculator.massimale_teorico(r) == 255.0
+
+    def test_pasto(self):
+        r = richiesta(data="2026-02-10", categoria="pasto", giorni=5)
+        assert calculator.massimale_teorico(r) == 50.0
+
+    def test_chilometrico(self):
+        r = richiesta(data="2026-02-10", categoria="chilometrico", km=250)
+        assert calculator.massimale_teorico(r) == 112.5
+
+    def test_alloggio(self):
+        r = richiesta(data="2026-02-10", categoria="alloggio", notti=2)
+        assert calculator.massimale_teorico(r) == 340.0
+
+
+class TestCalcola2026:
+    """Calcolo col plafond mensile aggiornato a 1400,00 € (dal 01/01/2026)."""
+
+    def test_plafond_incapiente_limita_la_quota_esente(self):
+        r = richiesta(data="2026-02-10", categoria="alloggio", notti=2, importo=300.0)
+        esente, imponibile, _ = calculator.calcola(r, esente_gia_riconosciuta=1300.0)
+        assert esente == 100.0
+        assert imponibile == 200.0
+
+    def test_plafond_esaurito_tutto_imponibile(self):
+        r = richiesta(data="2026-02-10", categoria="pasto", giorni=1, importo=10.0)
+        esente, imponibile, _ = calculator.calcola(r, esente_gia_riconosciuta=1400.0)
+        assert esente == 0.0
+        assert imponibile == 10.0
+
+
+class TestDecorrenza:
+    """La data della spesa determina i parametri: confine 31/12/2025 → 01/01/2026."""
+
+    def test_ultimo_giorno_2025_usa_massimali_previgenti(self):
+        r = richiesta(data="2025-12-31", categoria="trasferta_italia", giorni=1)
+        assert calculator.massimale_teorico(r) == 46.48
+
+    def test_primo_giorno_2026_usa_massimali_aggiornati(self):
+        r = richiesta(data="2026-01-01", categoria="trasferta_italia", giorni=1)
+        assert calculator.massimale_teorico(r) == 50.0

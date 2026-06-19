@@ -96,3 +96,26 @@ def test_normativa_mostra_massimali_vigenti(client):
     assert "46.48" in testo
     assert "77.47" in testo
     assert "1200.00" in testo
+
+
+def test_normativa_mostra_anche_massimali_2026(client):
+    testo = client.get("/normativa").get_data(as_text=True)
+    assert "50.00" in testo
+    assert "85.00" in testo
+    assert "1400.00" in testo
+
+
+def test_richiesta_2026_usa_nuovi_massimali(client):
+    # Pasto 3 giorni, 30 €: col massimale 2026 (10 €/g → 30 €) è tutto esente.
+    nuova_richiesta_pasto(client, data="2026-02-10", importo="30.00", giorni="3")
+    richieste = storage.carica()
+    assert richieste[0]["quota_esente"] == 30.0
+    assert richieste[0]["quota_imponibile"] == 0.0
+
+
+def test_regime_transitorio_spesa_2025_mantiene_massimali_previgenti(client):
+    # Stessa spesa ma datata 2025: massimale 2025 (8 €/g → 24 €), eccedenza imponibile.
+    nuova_richiesta_pasto(client, data="2025-12-15", importo="30.00", giorni="3")
+    richieste = storage.carica()
+    assert richieste[0]["quota_esente"] == 24.0
+    assert richieste[0]["quota_imponibile"] == 6.0

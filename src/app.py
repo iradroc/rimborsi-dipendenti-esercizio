@@ -110,27 +110,33 @@ def riepilogo():
         gruppo["esente"] = round(gruppo["esente"] + r["quota_esente"], 2)
         gruppo["imponibile"] = round(gruppo["imponibile"] + r["quota_imponibile"], 2)
         gruppo["richieste"] += 1
-    righe = [
-        {
-            "mese": mese,
-            "dipendente": dipendente,
-            "esente": dati["esente"],
-            "imponibile": dati["imponibile"],
-            "richieste": dati["richieste"],
-            "percentuale_plafond": min(
-                round(dati["esente"] / rules.PLAFOND_MENSILE * 100), 100
-            ),
-        }
-        for (mese, dipendente), dati in sorted(gruppi.items(), reverse=True)
-    ]
+    righe = []
+    for (mese, dipendente), dati in sorted(gruppi.items(), reverse=True):
+        plafond = rules.parametri(mese + "-01")["plafond_mensile"]
+        righe.append(
+            {
+                "mese": mese,
+                "dipendente": dipendente,
+                "esente": dati["esente"],
+                "imponibile": dati["imponibile"],
+                "richieste": dati["richieste"],
+                "plafond": plafond,
+                "percentuale_plafond": min(round(dati["esente"] / plafond * 100), 100),
+            }
+        )
     return render_template(
-        "riepilogo.html", righe=righe, plafond=rules.PLAFOND_MENSILE
+        "riepilogo.html", righe=righe, plafond=rules.PARAMETRI[2026]["plafond_mensile"]
     )
 
 
 @app.get("/normativa")
 def normativa():
-    return render_template("normativa.html", rules=rules)
+    return render_template(
+        "normativa.html",
+        previgente=rules.PARAMETRI[2025],
+        vigente=rules.PARAMETRI[2026],
+        categorie=rules.CATEGORIE,
+    )
 
 
 if __name__ == "__main__":
