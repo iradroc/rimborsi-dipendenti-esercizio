@@ -34,12 +34,17 @@ def _registra(form):
         "km": _numero(form.get("km")),
         "notti": _intero(form.get("notti")),
     }
-    ok, motivazione = validator.valida(richiesta)
+    ok, motivazione = validator.valida(richiesta, richieste)
     if ok:
         gia_riconosciuta = storage.esente_riconosciuta_nel_mese(
             richieste, richiesta["dipendente"], storage.mese(richiesta)
         )
-        esente, imponibile, dettaglio = calculator.calcola(richiesta, gia_riconosciuta)
+        giornate_agile = storage.giornate_agile_riconosciute_nel_mese(
+            richieste, richiesta["dipendente"], storage.mese(richiesta)
+        )
+        esente, imponibile, dettaglio = calculator.calcola(
+            richiesta, gia_riconosciuta, giornate_agile
+        )
         richiesta.update(
             stato="valida",
             motivazione="",

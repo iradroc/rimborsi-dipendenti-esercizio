@@ -122,3 +122,51 @@ class TestDecorrenza:
     def test_primo_giorno_2026_usa_massimali_aggiornati(self):
         r = richiesta(data="2026-01-01", categoria="trasferta_italia", giorni=1)
         assert calculator.massimale_teorico(r) == 50.0
+
+
+class TestEsteroScaglioni:
+    """Trasferte estere a scaglioni dal 2026 (85,00 / 76,50 / 68,00)."""
+
+    def test_entro_cinque_giorni_massimale_pieno(self):
+        r = richiesta(data="2026-02-10", categoria="trasferta_estero", giorni=5)
+        assert calculator.massimale_teorico(r) == 425.0
+
+    def test_sette_giorni_secondo_scaglione(self):
+        r = richiesta(data="2026-02-10", categoria="trasferta_estero", giorni=7)
+        # 5×85,00 + 2×76,50
+        assert calculator.massimale_teorico(r) == 578.0
+
+    def test_dodici_giorni_tre_scaglioni(self):
+        r = richiesta(data="2026-02-10", categoria="trasferta_estero", giorni=12)
+        # 5×85,00 + 5×76,50 + 2×68,00
+        assert calculator.massimale_teorico(r) == 943.5
+
+    def test_2025_resta_flat_senza_scaglioni(self):
+        r = richiesta(data="2025-02-10", categoria="trasferta_estero", giorni=12)
+        assert calculator.massimale_teorico(r) == round(77.47 * 12, 2)
+
+
+class TestLavoroAgile:
+    """Indennità lavoro agile: 3,50 €/g entro 12 giornate/mese (dal 2026)."""
+
+    def test_entro_il_limite_tutte_le_giornate(self):
+        r = richiesta(data="2026-02-10", categoria="lavoro_agile", giorni=3)
+        assert calculator.massimale_teorico(r, giornate_agile_riconosciute=0) == 10.5
+
+    def test_oltre_il_limite_solo_le_giornate_residue(self):
+        r = richiesta(data="2026-02-10", categoria="lavoro_agile", giorni=5)
+        # Già usate 10/12: ammesse solo 2 giornate → 2×3,50
+        assert calculator.massimale_teorico(r, giornate_agile_riconosciute=10) == 7.0
+
+    def test_limite_esaurito_nessuna_giornata_ammessa(self):
+        r = richiesta(data="2026-02-10", categoria="lavoro_agile", giorni=2)
+        assert calculator.massimale_teorico(r, giornate_agile_riconosciute=12) == 0.0
+
+    def test_calcola_giornate_eccedenti_imponibili(self):
+        r = richiesta(data="2026-02-10", categoria="lavoro_agile", giorni=4, importo=14.0)
+        # Già usate 10/12 → ammesse 2 → esente teorica 7,00; le altre 2 giornate imponibili
+        esente, imponibile, _ = calculator.calcola(
+            r, esente_gia_riconosciuta=0.0, giornate_agile_riconosciute=10
+        )
+        assert esente == 7.0
+        assert imponibile == 7.0

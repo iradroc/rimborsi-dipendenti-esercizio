@@ -16,6 +16,11 @@
       <td class="num">{{ "%.2f"|format(massimale) }} € / giorno</td>
     </tr>
     {% endfor %}
+    {% if parametri.scaglioni_estero %}
+    <tr>
+      <td colspan="2" class="nota">Trasferta estera a scaglioni: giornate 1–5 al massimale pieno, 6–10 ridotto del 10%, dall'11ª ridotto del 20%.</td>
+    </tr>
+    {% endif %}
     <tr>
       <td>{{ categorie["chilometrico"] }}</td>
       <td class="num">{{ "%.2f"|format(parametri.massimale_km) }} € / km</td>
@@ -24,6 +29,12 @@
       <td>{{ categorie["alloggio"] }}</td>
       <td class="num">{{ "%.2f"|format(parametri.massimale_notte) }} € / notte</td>
     </tr>
+    {% if parametri.massimale_agile %}
+    <tr>
+      <td>{{ categorie["lavoro_agile"] }}</td>
+      <td class="num">{{ "%.2f"|format(parametri.massimale_agile) }} € / giorno (max {{ parametri.limite_agile_giornate }} giornate/mese)</td>
+    </tr>
+    {% endif %}
     <tr class="riga-evidenziata">
       <td><strong>Plafond mensile complessivo per dipendente</strong></td>
       <td class="num"><strong>{{ "%.2f"|format(parametri.plafond_mensile) }} € / mese</strong></td>

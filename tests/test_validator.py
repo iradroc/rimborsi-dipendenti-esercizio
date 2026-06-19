@@ -101,3 +101,62 @@ def test_alloggio_valido():
     assert validator.valida(
         richiesta(categoria="alloggio", notti=3, giorni=None)
     ) == (True, "")
+
+
+def test_lavoro_agile_non_disponibile_nel_2025():
+    ok, motivazione = validator.valida(
+        richiesta(data="2025-12-31", categoria="lavoro_agile", giorni=2)
+    )
+    assert not ok
+    assert motivazione == "categoria non disponibile per la data della spesa"
+
+
+def test_lavoro_agile_valido_dal_2026():
+    assert validator.valida(
+        richiesta(data="2026-01-02", categoria="lavoro_agile", giorni=2)
+    ) == (True, "")
+
+
+def test_lavoro_agile_richiede_giornate():
+    ok, motivazione = validator.valida(
+        richiesta(data="2026-01-02", categoria="lavoro_agile", giorni=None)
+    )
+    assert not ok
+    assert motivazione == "numero di giornate non valido"
+
+
+def test_agile_incompatibile_con_trasferta_sovrapposta():
+    esistenti = [
+        richiesta(
+            data="2026-03-11",
+            categoria="trasferta_italia",
+            giorni=1,
+            stato="valida",
+        )
+    ]
+    nuova = richiesta(data="2026-03-10", categoria="lavoro_agile", giorni=3)
+    ok, motivazione = validator.valida(nuova, esistenti)
+    assert not ok
+    assert motivazione == "lavoro agile incompatibile con una trasferta sovrapposta"
+
+
+def test_trasferta_incompatibile_con_agile_sovrapposto():
+    esistenti = [
+        richiesta(
+            data="2026-03-10", categoria="lavoro_agile", giorni=3, stato="valida"
+        )
+    ]
+    nuova = richiesta(data="2026-03-12", categoria="trasferta_estero", giorni=2)
+    ok, motivazione = validator.valida(nuova, esistenti)
+    assert not ok
+    assert motivazione == "trasferta incompatibile con il lavoro agile sovrapposto"
+
+
+def test_nessun_conflitto_se_giorni_non_si_sovrappongono():
+    esistenti = [
+        richiesta(
+            data="2026-03-01", categoria="trasferta_italia", giorni=2, stato="valida"
+        )
+    ]
+    nuova = richiesta(data="2026-03-10", categoria="lavoro_agile", giorni=3)
+    assert validator.valida(nuova, esistenti) == (True, "")

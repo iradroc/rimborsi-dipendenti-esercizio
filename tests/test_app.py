@@ -119,3 +119,41 @@ def test_regime_transitorio_spesa_2025_mantiene_massimali_previgenti(client):
     richieste = storage.carica()
     assert richieste[0]["quota_esente"] == 24.0
     assert richieste[0]["quota_imponibile"] == 6.0
+
+
+def test_trasferta_estero_a_scaglioni(client):
+    nuova_richiesta_pasto(
+        client, data="2026-04-01", categoria="trasferta_estero", importo="600.00", giorni="7"
+    )
+    richieste = storage.carica()
+    # 5×85,00 + 2×76,50 = 578,00 esente; 600 − 578 = 22 imponibile.
+    assert richieste[0]["quota_esente"] == 578.0
+    assert richieste[0]["quota_imponibile"] == 22.0
+
+
+def test_lavoro_agile_limite_mensile_tra_richieste(client):
+    # Prime 8 giornate: tutte coperte (3,50 €/g → 28 €).
+    nuova_richiesta_pasto(
+        client, data="2026-03-05", categoria="lavoro_agile", importo="28.00", giorni="8"
+    )
+    # Altre 8 giornate nel mese: residue solo 4 (12 − 8) → coperte 14 €, il resto imponibile.
+    nuova_richiesta_pasto(
+        client, data="2026-03-20", categoria="lavoro_agile", importo="28.00", giorni="8"
+    )
+    richieste = storage.carica()
+    assert richieste[0]["quota_esente"] == 28.0
+    assert richieste[1]["quota_esente"] == 14.0
+    assert richieste[1]["quota_imponibile"] == 14.0
+
+
+def test_incompatibilita_agile_trasferta_respinge(client):
+    nuova_richiesta_pasto(
+        client, data="2026-03-10", categoria="trasferta_italia", importo="80.00", giorni="2"
+    )
+    risposta = nuova_richiesta_pasto(
+        client, data="2026-03-11", categoria="lavoro_agile", importo="3.50", giorni="1"
+    )
+    assert "respinta" in risposta.get_data(as_text=True)
+    richieste = storage.carica()
+    assert richieste[1]["stato"] == "respinta"
+    assert richieste[1]["motivazione"] == "lavoro agile incompatibile con una trasferta sovrapposta"
